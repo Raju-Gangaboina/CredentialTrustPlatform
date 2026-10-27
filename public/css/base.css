@@ -1,0 +1,178 @@
+/* ═══════════════════════════════════════════════════════════
+   BASE — Reset, typography, form controls.
+   ═══════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+h1, h2, h3, p, dl, ol, ul { margin: 0; }
+h1, h2, h3 { line-height: 1.2; letter-spacing: -0.02em; font-weight: 700; }
+h1 { font-size: 1.875rem; }
+h2 { font-size: 1.25rem; font-weight: 600; }
+h3 { font-size: 1rem;    font-weight: 600; }
+
+a { color: var(--brand); text-decoration: none; transition: color var(--t-fast); }
+a:hover { color: var(--brand-ink); text-decoration: underline; }
+code, .mono { font-family: var(--mono); font-size: 0.875em; color: var(--brand); background: var(--brand-soft); padding: 1px 5px; border-radius: 4px; }
+.muted { color: var(--ink-2); font-size: 0.875rem; }
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+  border-radius: var(--r-sm);
+}
+
+.skip {
+  position: absolute; left: -999px; top: 8px;
+  background: var(--panel); color: var(--ink);
+  padding: 8px 14px; border-radius: var(--r-sm); z-index: 200;
+  border: 1px solid var(--brand); box-shadow: var(--shadow-md);
+}
+.skip:focus { left: 8px; }
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  font: inherit; font-family: var(--font);
+  font-size: 0.875rem; font-weight: 700; line-height: 1.2;
+  padding: 10px 22px; border-radius: var(--r-sm);
+  border: 1.5px solid transparent;
+  background: var(--brand-grad);
+  color: #fff;
+  cursor: pointer; text-decoration: none;
+  box-shadow: 0 3px 14px var(--brand-glow), 0 1px 3px rgba(140,0,20,0.15);
+  transition: transform var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+  position: relative; overflow: hidden;
+  letter-spacing: 0.02em; white-space: nowrap;
+}
+/* Specular sheen */
+.btn::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(160deg, rgba(255,255,255,0.18) 0%, transparent 55%);
+  pointer-events: none;
+}
+.btn:hover {
+  background: var(--brand-grad-h);
+  box-shadow: 0 5px 22px var(--brand-glow), 0 2px 6px rgba(140,0,20,0.18);
+  transform: translateY(-1px);
+}
+.btn:active { transform: translateY(0); }
+
+/* White / outlined button */
+.btn.secondary {
+  background: var(--panel);
+  border-color: var(--brand);
+  color: var(--brand);
+  box-shadow: var(--shadow-sm);
+}
+.btn.secondary:hover {
+  background: var(--brand-soft);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.btn.ghost {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--ink-2);
+  box-shadow: none;
+}
+.btn.ghost:hover {
+  background: var(--brand-soft);
+  border-color: var(--brand);
+  color: var(--brand);
+  transform: translateY(-1px);
+}
+
+.btn.danger {
+  background: linear-gradient(135deg, #e8294a, #c0152a);
+  border-color: #c0152a;
+  box-shadow: 0 3px 14px var(--brand-glow);
+}
+.btn.danger:hover {
+  background: linear-gradient(135deg, #d41e35, #a01020);
+  box-shadow: 0 5px 20px var(--brand-glow);
+}
+
+.btn.sm { padding: 6px 14px; font-size: 0.8125rem; border-radius: var(--r-xs); }
+.btn:disabled { opacity: 0.45; cursor: default; transform: none !important; box-shadow: none !important; }
+
+.link-btn {
+  background: none; border: 0; padding: 0;
+  font: inherit; font-family: var(--font);
+  color: var(--brand); cursor: pointer;
+  text-decoration: underline; text-decoration-color: rgba(229, 36, 63,0.35);
+  transition: text-decoration-color var(--t-fast), color var(--t-fast);
+}
+.link-btn:hover { color: var(--brand-ink); text-decoration-color: var(--brand-ink); }
+
+/* ── Form fields ─────────────────────────────────────────── */
+.field { display: block; }
+.field > span {
+  display: block; font-size: 0.75rem; font-weight: 700;
+  color: var(--ink-2); margin-bottom: 6px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+
+input, select, textarea {
+  font: inherit; font-family: var(--font); font-size: 0.9375rem;
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  color: var(--ink);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+  box-shadow: var(--shadow-sm);
+}
+input::placeholder { color: var(--ink-3); }
+input[type="checkbox"] { width: auto; accent-color: var(--brand); }
+input[type="radio"]    { accent-color: var(--brand); }
+input[type="file"] { padding: 8px 12px; cursor: pointer; background: var(--panel-2); }
+input[type="file"]::file-selector-button {
+  margin-right: 12px; padding: 6px 14px;
+  border: 1.5px solid var(--line-strong); border-radius: var(--r-xs);
+  background: var(--brand-soft); color: var(--brand);
+  cursor: pointer; font-family: var(--font); font-size: 0.8125rem; font-weight: 700;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+input[type="file"]::file-selector-button:hover {
+  background: var(--brand); color: #fff;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(229, 36, 63,0.12), var(--shadow-sm);
+}
+
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3ae' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 36px;
+  appearance: none; -webkit-appearance: none;
+  cursor: pointer;
+}
+select option { background: var(--panel); color: var(--ink); }
+
+/* ── Scrollbar ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0c0c11; }
+::-webkit-scrollbar-thumb { background: rgba(229, 36, 63,0.25); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--brand); }
+
+

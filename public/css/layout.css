@@ -1,0 +1,251 @@
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT — App shell, sidebar, page header, content area.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── App shell ───────────────────────────────────────────────── */
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  min-height: 100vh;
+}
+.content { min-width: 0; display: flex; flex-direction: column; }
+
+/* Signed-out pages */
+.app.bare { grid-template-columns: minmax(0, 1fr); }
+.app.bare .sidebar { display: none; }
+.app.bare .view { margin: 0 auto; max-width: 960px; width: 100%; position: relative; z-index: 1; }
+
+/* ── Sidebar — pure white with red accents ───────────────────── */
+.sidebar {
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  display: flex; flex-direction: column;
+  padding: 24px 16px;
+  background: var(--nav);
+  border-right: 1px solid var(--nav-line);
+  box-shadow: 2px 0 16px rgba(229, 36, 63,0.06);
+}
+
+/* Soft red-to-white gradient wash at top of sidebar */
+.sidebar::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 200px;
+  background: linear-gradient(180deg, rgba(255, 230, 230, 0.55) 0%, transparent 100%);
+  pointer-events: none; z-index: 0;
+}
+
+/* Brand / logo */
+.brand {
+  display: flex; align-items: center; gap: 12px;
+  text-decoration: none; font-weight: 700;
+  color: var(--ink); position: relative; z-index: 1;
+}
+.brand-mark {
+  flex: none; display: grid; place-items: center;
+  width: 42px; height: 42px; border-radius: 13px;
+  background: var(--brand-grad);
+  box-shadow: 0 4px 16px var(--brand-glow);
+  transition: box-shadow var(--t-med), transform var(--t-med);
+}
+.brand:hover .brand-mark {
+  box-shadow: 0 6px 24px rgba(229, 36, 63,0.30);
+  transform: scale(1.06);
+}
+.brand-mark .ico { width: 22px; height: 22px; color: #fff; }
+.brand-text { display: grid; line-height: 1.2; }
+.brand-text strong {
+  font-size: 0.9375rem; font-weight: 800; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--brand);
+}
+.brand-text small {
+  font-size: 0.625rem; font-weight: 600; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.sidebar .brand { padding: 4px 10px 32px; }
+
+/* Nav section title */
+.nav-title {
+  padding: 0 14px 8px;
+  font-size: 0.625rem; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--ink-3);
+  position: relative; z-index: 1;
+}
+
+/* Nav list */
+.nav { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; position: relative; z-index: 1; }
+.nav a {
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px 14px; border-radius: var(--r-sm);
+  color: var(--ink-2); text-decoration: none;
+  font-size: 0.9375rem; font-weight: 500;
+  transition: background var(--t-fast), color var(--t-fast);
+  position: relative;
+}
+.nav a .ico { flex: none; width: 18px; height: 18px; opacity: 0.55; transition: opacity var(--t-fast), color var(--t-fast); }
+.nav a:hover { background: var(--brand-soft); color: var(--brand); text-decoration: none; }
+.nav a:hover .ico { opacity: 1; color: var(--brand); }
+.nav a[aria-current="page"] {
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-weight: 700;
+}
+.nav a[aria-current="page"] .ico { opacity: 1; color: var(--brand); }
+.nav a[aria-current="page"]::before {
+  content: '';
+  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 58%; border-radius: 0 3px 3px 0;
+  background: var(--brand-grad);
+}
+
+/* Sidebar footer */
+.sidebar-foot {
+  margin-top: auto; padding: 16px 8px 0;
+  border-top: 1px solid var(--nav-line);
+  display: grid; gap: 12px;
+  position: relative; z-index: 1;
+}
+.who-row { display: flex; align-items: center; gap: 12px; }
+.avatar {
+  flex: none; display: grid; place-items: center;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--brand-grad);
+  color: #fff; font-size: 0.8125rem; font-weight: 800;
+  box-shadow: 0 3px 10px var(--brand-glow);
+}
+.who { color: var(--ink); font-size: 0.875rem; font-weight: 600; overflow-wrap: anywhere; }
+.who small { display: block; margin-top: 2px; font-weight: 400; color: var(--ink-2); text-transform: capitalize; font-size: 0.75rem; }
+.sidebar .btn.ghost {
+  color: var(--ink-2); border-color: var(--line-strong);
+  justify-content: flex-start; border-radius: var(--r-sm);
+  padding: 10px 14px; font-size: 0.875rem;
+}
+.sidebar .btn.ghost:hover { background: var(--brand-soft); color: var(--brand); border-color: var(--brand); }
+.sidebar :focus-visible { outline-color: var(--brand); }
+
+/* ── Page header — white bar with red title ──────────────────── */
+.pagehead {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  flex-wrap: wrap; gap: 12px 20px;
+  padding: 24px 40px 20px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 12px rgba(229, 36, 63,0.06);
+  position: sticky; top: 0; z-index: 10;
+}
+.pagehead[hidden] { display: none; }
+.pagehead-main { min-width: 0; display: grid; gap: 5px; }
+.pagehead-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+/* Breadcrumbs */
+.crumbs { display: flex; gap: 8px; align-items: center; font-size: 0.8125rem; color: var(--ink-3); }
+.crumbs a { color: var(--ink-2); transition: color var(--t-fast); }
+.crumbs a:hover { color: var(--brand); text-decoration: none; }
+
+.pagehead h1 {
+  font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.pagehead .muted { font-size: 0.875rem; }
+
+/* Bare (signed-out) pagehead */
+.app.bare .pagehead {
+  background: transparent; border: 0;
+  justify-content: center; padding: 48px 16px 0;
+  backdrop-filter: none; position: static; box-shadow: none;
+}
+.app.bare .brand-text strong { color: var(--brand); }
+
+/* ── View area ───────────────────────────────────────────────── */
+.view { padding: 36px 40px 80px; width: 100%; }
+.view:focus { outline: none; }
+
+/* Layout utilities */
+.stack > * + * { margin-top: 22px; }
+.stack-sm > * + * { margin-top: 12px; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.row.end { justify-content: flex-end; }
+.row.between { justify-content: space-between; align-items: center; }
+.grid-2 { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.grid-3 { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+
+/* ── Landing background — vivid red-to-white sweep ──────────── */
+.app.bare {
+  background: linear-gradient(160deg, #ffd6d6 0%, #ffe8e8 18%, #fff4f4 42%, #ffffff 70%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .sidebar {
+    position: static; height: auto;
+    flex-direction: row; flex-wrap: wrap; align-items: center;
+    gap: 8px 16px; padding: 14px 18px;
+    border-right: none; border-bottom: 1px solid var(--nav-line);
+    box-shadow: 0 2px 10px rgba(229, 36, 63,0.06);
+  }
+  .sidebar::before { display: none; }
+  .sidebar .brand { padding: 0; }
+  .nav-title { display: none; }
+  .nav { display: flex; gap: 4px; }
+  .nav a::before { display: none; }
+  .sidebar-foot { margin: 0 0 0 auto; border: 0; padding: 0; grid-auto-flow: column; align-items: center; }
+  .pagehead { padding: 18px 20px 16px; position: static; }
+  .view { padding: 24px 20px 60px; }
+  .brand-text small { display: none; }
+}
+@media (max-width: 560px) {
+  .pagehead h1 { font-size: 1.375rem; }
+  .view { padding: 18px 16px 48px; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   DARK / CRIMSON THEME — app-wide (matches the landing page)
+   ═══════════════════════════════════════════════════════════════ */
+body { background: #08080c; }
+.app { background: #08080c; }
+.content {
+  background:
+    radial-gradient(ellipse 620px 460px at 100% 100%, rgba(205, 26, 58, 0.16), transparent 72%),
+    radial-gradient(ellipse 760px 240px at 30% 0%, rgba(229, 36, 63, 0.05), transparent 75%),
+    #08080c;
+}
+.sidebar {
+  background: linear-gradient(180deg, #0d0d13 0%, #0a0a0f 100%);
+  box-shadow: none;
+}
+.sidebar::before { background: linear-gradient(180deg, rgba(229, 36, 63, 0.10) 0%, transparent 100%); }
+.brand { color: var(--ink); }
+.brand-mark { border-radius: 12px; box-shadow: 0 0 22px rgba(229, 36, 63, 0.35); }
+.brand-text strong { color: #fff; letter-spacing: 0.12em; }
+.brand-text small { color: #8a8a96; letter-spacing: 0.22em; }
+.nav a:hover { background: var(--hover); color: #fff; }
+.nav a[aria-current="page"] {
+  background: linear-gradient(90deg, rgba(229, 36, 63, 0.20), rgba(229, 36, 63, 0.05));
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(229, 36, 63, 0.28);
+}
+.nav a[aria-current="page"] .ico { color: #ff4d66; }
+.pagehead {
+  background: rgba(10, 10, 15, 0.82);
+  box-shadow: none;
+  border-bottom: 1px solid var(--line);
+}
+.pagehead h1 { color: #fff; }
+.crumbs a:hover { color: #ff4d66; }
+.sidebar .btn.ghost:hover, .btn.ghost:hover { color: #fff; }
+
+/* Signed-out pages (login forms): same dark canvas + red glow as the landing page */
+.app.bare {
+  background:
+    radial-gradient(ellipse 560px 520px at 100% 85%, rgba(205, 26, 58, 0.42), transparent 72%),
+    radial-gradient(ellipse 420px 360px at 100% 100%, rgba(150, 12, 40, 0.38), transparent 75%),
+    radial-gradient(ellipse 760px 220px at 33% 70%, rgba(229, 36, 63, 0.08), transparent 75%),
+    linear-gradient(180deg, #0a0a0f 0%, #08080c 100%);
+  background-attachment: fixed;
+}
+.app.bare .brand-text strong { color: #fff; }
+.app.bare .pagehead { padding-top: 40px; }

@@ -1,0 +1,31 @@
+{
+  "name": "credential-trust-platform",
+  "version": "0.1.0",
+  "description": "Campus Credential Trust & Verification Platform (V1 + V2)",
+  "main": "server/index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "seed": "node server/db/seedIssuers.js",
+    "seed:catalog": "node server/db/seedCatalog.js"
+  },
+  "dependencies": {
+    "@contentauth/c2pa-node": "^0.9.9",
+    "bcrypt": "^5.1.1",
+    "express": "^4.21.0",
+    "express-session": "^1.18.0",
+    "jimp": "^1.6.1",
+    "jsqr": "^1.4.0",
+    "multer": "^1.4.5-lts.1",
+    "pdf-to-png-converter": "^4.2.1",
+    "pdfjs-dist": "^4.10.38",
+    "tesseract.js": "^7.0.0",
+    "xlsx": "^0.18.5"
+  },
+  "optionalDependencies": {
+    "@napi-rs/canvas-win32-x64-msvc": "^1.0.9"
+  }
+}

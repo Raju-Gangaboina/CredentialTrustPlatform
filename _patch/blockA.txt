@@ -1,0 +1,174 @@
+// ---------------------------------------------------------------------------------------------------
+// STUDENT-BLIND DESIGN (decided with the project owner, 2026-10-03)
+//
+// A student never sees ANY automated verification result: not Verified, not Needs review, not the
+// evidence, not the extracted fields, not the "this looks like a forwarded copy" warning. If they could,
+// they could upload a fake, see it get flagged, delete it and upload the original, and nobody would ever
+// notice; a "Verified" badge would also let a forger keep tweaking a fake until it passes.
+//
+// So the student only ever gets:
+//   * SUBMITTED : everything is "submitted" until a teacher acts
+//   * APPROVED / RESUBMIT (+ the teacher's own note) : a HUMAN decision, set only by POST /:certId/review
+// Teachers see everything (status, evidence, and the full upload history of that student + subject).
+// "Delete" is now a soft WITHDRAW: the row, file and evidence stay so the teacher can see it.
+//
+// RULE FOR FUTURE EDITS: student routes must pick explicit columns (see studentView). Never `SELECT c.*`
+// or formatCert() in a route a student can call, or the automated result leaks again.
+// ---------------------------------------------------------------------------------------------------
+
+// Limits. With no feedback to probe there is little to abuse, so these just stop flooding and churn.
+// A teacher's RESUBMIT request never counts against the student.
+const MAX_UPLOADS_PER_SUBJECT = 10;      // all uploads incl. withdrawn ones (+1 for each teacher RESUBMIT)
+const MAX_WITHDRAWALS_PER_SUBJECT = 3;   // withdrawals the student chose themselves
+
+// A certificate the teacher still has to act on. NOT_FOUND is included on purpose: the student is told
+// nothing automatically, so an auto-NOT_FOUND must reach a teacher or it would sit forever.
+const NEEDS_TEACHER_SQL = "(c.faculty_decision IS NULL AND c.status IN ('NEEDS_REVIEW', 'NOT_FOUND'))";
+
+// Anything still PENDING when the server starts was cut off by a restart (checks now run in the
+// background after the upload response). Hand it to a teacher rather than leave it spinning.
+db.prepare("UPDATE certificates SET status = 'NEEDS_REVIEW', evidence_json = ? WHERE status = 'PENDING'")
+  .run(JSON.stringify([{ label: 'Processing was interrupted (the server restarted before the checks finished). Needs a manual look.', pass: false }]));
+
+function discardFile(file) {
+  if (file && file.path) fs.unlink(file.path, () => {});
+}
+
+// Student uploads a certificate into a subject vault. The response is immediate and says nothing about
+// the outcome; extraction + verification run in the background (processCertificate below).
+router.post('/subject/:subjectId', requireStudent, upload.single('certificate'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded (field name: certificate)' });
+  const subjectId = Number(req.params.subjectId);
+
+  const subject = db.prepare('SELECT s.*, c.id as class_id FROM subjects s JOIN classes c ON s.class_id = c.id WHERE s.id = ?').get(subjectId);
+  if (!subject) { discardFile(req.file); return res.status(404).json({ error: 'Subject vault not found' }); }
+
+  const student = db.prepare('SELECT * FROM students WHERE id = ?').get(req.session.studentId);
+  if (!student || student.class_id !== subject.class_id) {
+    discardFile(req.file);
+    return res.status(403).json({ error: 'Student does not belong to this class/vault' });
+  }
+
+  const total = db.prepare('SELECT COUNT(*) AS n FROM certificates WHERE student_id = ? AND subject_id = ?').get(student.id, subjectId).n;
+  const grants = db.prepare("SELECT COUNT(*) AS n FROM certificates WHERE student_id = ? AND subject_id = ? AND faculty_decision = 'RESUBMIT'").get(student.id, subjectId).n;
+  if (total >= MAX_UPLOADS_PER_SUBJECT + grants) {
+    discardFile(req.file);
+    return res.status(429).json({ error: 'You have reached the upload limit for this subject. Please talk to your faculty.' });
+  }
+
+  const insertInfo = db.prepare(`
+    INSERT INTO certificates (student_id, subject_id, original_filename, stored_filename, status)
+    VALUES (?, ?, ?, ?, 'PENDING')
+  `).run(student.id, subjectId, req.file.originalname, req.file.filename);
+  const certId = Number(insertInfo.lastInsertRowid);
+
+  res.json({ ok: true, certificateId: certId, state: 'SUBMITTED' });
+
+  processCertificate(certId, req.file, student).catch((err) => {
+    console.error('processCertificate crashed for certificate', certId, err);
+  });
+});
+
+// The real pipeline, run AFTER the student has already been answered. Never throws to the caller: any
+// failure just routes the certificate to a teacher as NEEDS_REVIEW with the reason in the evidence.
+async function processCertificate(certId, file, student) {
+  try {
+    // Layer 0: Content Credentials (C2PA) provenance check on the raw file. A threat here does not
+    // stop the pipeline (the other layers still run) but caps the final status at NEEDS_REVIEW.
+    // See verification/provenance.js. Never throws; a failure just means no extra evidence.
+    let provenance = { threat: false, evidence: [] };
+    try { provenance = await checkProvenance(file.path); }
+    catch (provErr) { console.warn('Provenance check failed (ignored):', provErr.message); }
+
+    const extraction = await extractFromFile(file.path, { studentName: student.name });
+    const verification = await runVerification(extraction, { studentName: student.name });
+
+    // AI forensic check runs AFTER the real status is already decided, and its result is appended
+    // to the evidence list ONLY — it is never read by runVerification and never changes `status`.
+    // See verification/aiForensics.js header for why this stays advisory-only by design.
+    const finalStatus = applyProvenanceCap(verification.status, provenance);
+    // Soft upload check: file name looks like a WhatsApp/Telegram/screenshot copy. Evidence only (teacher
+    // side); never changes status or blocks the upload. See verification/copyDetection.js.
+    const copyNote = detectForwardedCopy(file.originalname);
+    const evidence = [...provenance.evidence, ...(copyNote ? [copyNote.evidence] : []), ...verification.evidence];
+    try {
+      const forensics = await runForensicCheck(extraction, file.path);
+      // Only surface it when it actually ran. A skipped/failed advisory check (no key, HTTP 429,
+      // etc.) says nothing about the certificate, so it's just noise in the evidence list.
+      if (forensics.available !== false) evidence.push(forensics.evidence);
+    } catch (forensicsErr) {
+      console.warn('AI forensic check failed (ignored, advisory only):', forensicsErr.message);
+    }
+
+    db.prepare(`
+      UPDATE certificates
+      SET extracted_json = ?, issuer_key = ?, status = ?, evidence_json = ?
+      WHERE id = ?
+    `).run(
+      JSON.stringify(extraction.fields),
+      verification.issuerKey,
+      finalStatus,
+      JSON.stringify(evidence),
+      certId
+    );
+  } catch (err) {
+    db.prepare('UPDATE certificates SET status = ?, evidence_json = ? WHERE id = ?')
+      .run('NEEDS_REVIEW', JSON.stringify([{ label: `Processing error: ${err.message}`, pass: false }]), certId);
+  }
+}
+
+// Student: list own certificates. Explicit columns only (see the STUDENT-BLIND note above).
+router.get('/mine', requireStudent, (req, res) => {
+  const rows = db.prepare(`
+    SELECT c.id, c.subject_id, c.original_filename, c.uploaded_at, c.faculty_decision, c.faculty_note,
+           sub.name AS subject_name
+    FROM certificates c
+    JOIN subjects sub ON c.subject_id = sub.id
+    WHERE c.student_id = ? AND c.withdrawn_at IS NULL
+    ORDER BY c.uploaded_at DESC, c.id DESC
+  `).all(req.session.studentId);
+  res.json(rows.map(studentView));
+});
+
+// The ONLY shape a student ever receives for a certificate.
+function studentView(row) {
+  const state = row.faculty_decision === 'APPROVED' ? 'APPROVED'
+    : row.faculty_decision === 'RESUBMIT' ? 'RESUBMIT'
+    : 'SUBMITTED';
+  return {
+    id: row.id,
+    subject_id: row.subject_id,
+    subject_name: row.subject_name,
+    original_filename: row.original_filename,
+    uploaded_at: row.uploaded_at,
+    state,
+    note: state === 'RESUBMIT' ? (row.faculty_note || null) : null,   // the teacher's own words, nothing automated
+    canWithdraw: state !== 'APPROVED',
+  };
+}
+
+// Student: withdraw one of their own uploads (wrong file, duplicate, or a teacher asked for a new one).
+// SOFT: the row, the stored file and the evidence are kept so the teacher still sees it and can see it was
+// replaced. (This used to hard-delete, which let a student erase a flagged fake without a trace.)
+router.delete('/:certId', requireStudent, (req, res) => {
+  const certId = Number(req.params.certId);
+  const cert = db.prepare('SELECT * FROM certificates WHERE id = ? AND student_id = ? AND withdrawn_at IS NULL').get(certId, req.session.studentId);
+  if (!cert) return res.status(404).json({ error: 'Certificate not found' });
+  if (cert.faculty_decision === 'APPROVED') {
+    return res.status(409).json({ error: 'Your faculty has approved this certificate, so it can\'t be withdrawn. Ask them if something is wrong.' });
+  }
+  // Withdrawals a teacher asked for (RESUBMIT) are free; only ones the student chose count toward the cap.
+  if (cert.faculty_decision !== 'RESUBMIT') {
+    const used = db.prepare(`
+      SELECT COUNT(*) AS n FROM certificates
+      WHERE student_id = ? AND subject_id = ? AND withdrawn_at IS NOT NULL
+        AND (faculty_decision IS NULL OR faculty_decision != 'RESUBMIT')
+    `).get(req.session.studentId, cert.subject_id).n;
+    if (used >= MAX_WITHDRAWALS_PER_SUBJECT) {
+      return res.status(429).json({ error: 'You have withdrawn the maximum number of uploads for this subject. Please talk to your faculty.' });
+    }
+  }
+  db.prepare("UPDATE certificates SET withdrawn_at = datetime('now') WHERE id = ?").run(certId);
+  res.json({ ok: true });
+});
+

@@ -1,0 +1,27 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.bak
+
+# dependencies
+node_modules/
+
+# database & user data (student PII)
+data.sqlite
+data.sqlite-*
+server/uploads/
+
+# logs
+*.log
+
+# OCR model data
+eng.traineddata
+
+# local snapshot backups
+_backup_*/
+backup-pre-*/
+
+# OS / editor
+.DS_Store
+Thumbs.db

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Udemy certificate check</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #f4f4f7; background: #08080c; line-height: 1.5; }
+  h1 { font-size: 22px; }
+  .card { border: 1px solid #d1d7dc; border-radius: 8px; padding: 16px; margin: 16px 0; }
+  .ok { border-color: #4ade80; background: rgba(34,197,94,0.12); }
+  .bad { border-color: #ff5d73; background: rgba(229,36,63,0.15); }
+  .warn { border-color: #fbbf24; background: rgba(245,158,11,0.13); }
+  a.bm { display: inline-block; padding: 8px 14px; background: #e5243f; color: #fff; border-radius: 6px; text-decoration: none; font-weight: 600; cursor: grab; }
+  code { background: rgba(229,36,63,0.14); color: #ff8a9a; padding: 1px 5px; border-radius: 4px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+  td, th { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e4e4e4; }
+</style>
+</head>
+<body>
+<h1>Udemy certificate check</h1>
+<div id="out"></div>
+
+<div id="setup">
+  <div class="card">
+    <p><strong>One-time setup:</strong> drag this button to your bookmarks bar.</p>
+    <p><a class="bm" id="bm" href="#">Check Udemy certificate</a></p>
+    <p><strong>Each time:</strong></p>
+    <ol>
+      <li>Log in to this platform as faculty in this browser.</li>
+      <li>Open the certificate's Udemy page (<code>ude.my/UC-…</code> or <code>udemy.com/certificate/UC-…</code>) in your own browser.</li>
+      <li>Click the bookmark. This page opens and compares Udemy's recipient name with the uploaded certificate.</li>
+    </ol>
+    <p>Udemy blocks automated requests, but it shows the page normally to you, so your browser does the lookup and this platform does the comparison.</p>
+  </div>
+</div>
+
+<script>
+  // Bookmarklet: runs on udemy.com, reads the recipient section of the page text, and opens this page with it.
+  function bookmarklet(base) {
+    var m = location.pathname.match(/UC-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}/i);
+    if (!/(^|\.)udemy\.com$/.test(location.hostname) || !m) { alert('Open a Udemy certificate page first (udemy.com/certificate/UC-...).'); return; }
+    var t = document.body.innerText, i = t.indexOf('Certificate Recipient');
+    if (i < 0) { alert('Could not find the "Certificate Recipient" section on this page.'); return; }
+    window.open(base + '/udemy-proof.html?id=' + encodeURIComponent(m[0]) + '&snippet=' + encodeURIComponent(t.slice(i, i + 700)), '_blank');
+  }
+  document.getElementById('bm').href = 'javascript:(' + bookmarklet.toString() + ')(' + JSON.stringify(location.origin) + ')';
+  document.getElementById('bm').addEventListener('click', function (e) { e.preventDefault(); alert('Drag this button to your bookmarks bar instead of clicking it.'); });
+
+  var params = new URLSearchParams(location.search);
+  var out = document.getElementById('out');
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+
+  if (params.get('id') && params.get('snippet')) {
+    document.getElementById('setup').style.display = 'none';
+    out.innerHTML = '<div class="card">Checking…</div>';
+    fetch('/api/certificates/udemy-proof', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ udemyId: params.get('id'), snippet: params.get('snippet') })
+    }).then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+      .then(function (r) {
+        if (r.status === 401 || r.status === 403) { out.innerHTML = '<div class="card warn">Log in as faculty on this platform first, then click the bookmark again.</div>'; return; }
+        if (r.status !== 200) { out.innerHTML = '<div class="card bad">' + esc(r.body.error || 'Something went wrong') + '</div>'; return; }
+        var b = r.body;
+        var html = '<div class="card"><strong>Udemy says</strong> <code>' + esc(b.udemyId) + '</code> was issued to <strong>' + esc(b.udemyRecipient) + '</strong>' + (b.udemyCourse ? ' for “' + esc(b.udemyCourse) + '”' : '') + '.</div>';
+        if (!b.matched) {
+          html += '<div class="card warn">No uploaded certificate in your classes carries this certificate number.</div>';
+        } else {
+          b.results.forEach(function (x) {
+            var cls = x.status === 'VERIFIED' ? 'ok' : x.status === 'NOT_FOUND' ? 'bad' : 'warn';
+            var msg = x.status === 'VERIFIED' ? 'Verified — names match Udemy’s record.'
+              : x.status === 'NOT_FOUND' ? 'Not verified — Udemy issued this number to a different person. Likely altered.'
+              : 'Needs your review — names only partly match.';
+            html += '<div class="card ' + cls + '"><strong>' + esc(x.studentName) + '</strong> (' + esc(x.rollNumber || 'no roll no.') + ')<br>Name on uploaded certificate: ' + esc(x.certificateName || 'not read') + '<br><strong>' + msg + '</strong></div>';
+          });
+        }
+        out.innerHTML = html;
+      })
+      .catch(function () { out.innerHTML = '<div class="card bad">Could not reach the platform.</div>'; });
+  }
+</script>
+</body>
+</html>
+

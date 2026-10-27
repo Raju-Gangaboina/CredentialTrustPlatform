@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Credential Trust Platform</title>
+<meta name="description" content="Certificates verified by the people who issued them. Students upload coursework certificates; each is checked against what its issuer can confirm.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/layout.css">
+<link rel="stylesheet" href="/css/components.css">
+<link rel="stylesheet" href="/css/landing.css">
+</head>
+<body>
+  <a class="skip" href="#view">Skip to content</a>
+
+  <!-- App shell: sidebar (signed-in only) + page header + view. Auth/landing pages use the "bare" layout. -->
+  <div class="app" id="app">
+    <aside class="sidebar" id="sidebar" aria-label="Main navigation"></aside>
+    <div class="content">
+      <header class="pagehead" id="pagehead"></header>
+      <main class="view" id="view" tabindex="-1"></main>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,95 @@
+// Faculty: the worklist for a class: certificates a teacher still has to act on (NEEDS_REVIEW or NOT_FOUND,
+// no teacher decision yet), including ones the student has already withdrawn (those are tagged `withdrawn`).
+// Each item carries the student's full upload history for that subject. Only subjects this teacher may see.
+router.get('/review-queue/:classId', requireFaculty, (req, res) => {
+  const classId = Number(req.params.classId);
+  const cls = accessibleClass(req.session.facultyId, classId);
+  if (!cls) return res.status(404).json({ error: 'Class not found' });
+
+  const vis = subjectVisibility(req.session.facultyId);
+  const rows = db.prepare(`
+    SELECT c.*, s.name as student_name, s.roll_number, sub.name as subject_name
+    FROM certificates c
+    JOIN students s ON c.student_id = s.id
+    JOIN subjects sub ON c.subject_id = sub.id
+    JOIN classes cl ON cl.id = sub.class_id
+    WHERE s.class_id = ? AND ${NEEDS_TEACHER_SQL} AND ${vis.sql}
+    ORDER BY c.uploaded_at ASC, c.id ASC
+  `).all(classId, ...vis.params);
+
+  const attemptsStmt = db.prepare(`
+    SELECT id, original_filename, uploaded_at, status, withdrawn_at, faculty_decision
+    FROM certificates WHERE student_id = ? AND subject_id = ? ORDER BY id
+  `);
+  res.json(rows.map((row) => queueItem(row, attemptsStmt.all(row.student_id, row.subject_id))));
+});
+
+// An earlier upload counts as "flagged, then withdrawn" when the student withdrew it while it was
+// NEEDS_REVIEW / NOT_FOUND and no teacher had asked them to redo it (a teacher's RESUBMIT makes the
+// replacement expected, not suspicious). A teacher merely dismissing it does not clear the flag.
+function wasFlaggedThenWithdrawn(a) {
+  return !!a.withdrawn_at
+    && (a.status === 'NEEDS_REVIEW' || a.status === 'NOT_FOUND')
+    && (a.faculty_decision === null || a.faculty_decision === 'DISMISSED');
+}
+
+function queueItem(row, attempts) {
+  return {
+    ...formatCert(row),
+    withdrawn: !!row.withdrawn_at,
+    replacedAfterFlag: attempts.some((a) => a.id < row.id && wasFlaggedThenWithdrawn(a)),
+    history: attempts.filter((a) => a.id !== row.id).map((a) => ({
+      id: a.id,
+      filename: a.original_filename,
+      uploaded_at: a.uploaded_at,
+      status: a.status,
+      withdrawn: !!a.withdrawn_at,
+      faculty_decision: a.faculty_decision,
+      when: a.id < row.id ? 'earlier' : 'later',
+    })),
+  };
+}
+
+// Faculty: act on a worklist item. This is the ONLY place a student's APPROVED / RESUBMIT state is set.
+//   VERIFIED  -> student sees "Approved"
+//   NOT_FOUND -> student sees "Resubmit" plus the teacher's note (and gets one extra upload allowance)
+//   DISMISS   -> only for an upload the student already withdrew: the teacher has seen it, so it leaves the
+//                worklist; the student is told nothing and the "flagged then withdrawn" history is kept.
+// Only a teacher who may see that certificate's subject can decide it.
+router.post('/:certId/review', requireFaculty, (req, res) => {
+  const certId = Number(req.params.certId);
+  const { decision, note } = req.body || {};
+  if (!['VERIFIED', 'NOT_FOUND', 'DISMISS'].includes(decision)) return res.status(400).json({ error: 'decision must be VERIFIED, NOT_FOUND or DISMISS' });
+
+  const cert = db.prepare('SELECT * FROM certificates WHERE id = ?').get(certId);
+  if (!cert) return res.status(404).json({ error: 'Certificate not found' });
+  if (!canReviewCertificate(req.session.facultyId, certId)) {
+    return res.status(403).json({ error: 'This certificate is in a subject you do not teach' });
+  }
+  const cleanNote = typeof note === 'string' ? note.trim().slice(0, 300) : '';
+  const evidence = JSON.parse(cert.evidence_json || '[]');
+
+  if (decision === 'DISMISS') {
+    if (!cert.withdrawn_at) return res.status(400).json({ error: 'Only an upload the student has withdrawn can be dismissed. Mark it verified or not found instead.' });
+    evidence.push({ label: 'Faculty acknowledged this upload after the student withdrew it', pass: null });
+    db.prepare("UPDATE certificates SET faculty_decision = 'DISMISSED', reviewed_by_faculty = 1, evidence_json = ? WHERE id = ?")
+      .run(JSON.stringify(evidence), certId);
+    return res.json({ ok: true });
+  }
+
+  evidence.push({ label: `Faculty manual review: ${cleanNote || 'no note'}`, pass: decision === 'VERIFIED' });
+  db.prepare(`
+    UPDATE certificates
+    SET status = ?, evidence_json = ?, reviewed_by_faculty = 1, faculty_decision = ?, faculty_note = ?
+    WHERE id = ?
+  `).run(
+    decision,
+    JSON.stringify(evidence),
+    decision === 'VERIFIED' ? 'APPROVED' : 'RESUBMIT',
+    decision === 'NOT_FOUND' && cleanNote ? cleanNote : null,
+    certId
+  );
+
+  res.json({ ok: true });
+});
+

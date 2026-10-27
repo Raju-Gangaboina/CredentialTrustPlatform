@@ -1,0 +1,252 @@
+/* Campus Credential Trust Platform — design system.
+   Intentionally NOT a Bootstrap/Material look: warm paper background, one ink accent,
+   generous whitespace, evidence rendered as a checklist rather than dashboard widgets. */
+
+:root {
+  --paper: #faf8f4;
+  --paper-raised: #ffffff;
+  --ink: #1c1a17;
+  --ink-soft: #5c574e;
+  --line: #e6e1d6;
+  --accent: #2f5d50;      /* deep pine green — "verified" trust color */
+  --accent-soft: #e4ede9;
+  --amber: #9a6b1f;
+  --amber-soft: #f6ecd8;
+  --red: #a13a2f;
+  --red-soft: #f7e6e2;
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(28,26,23,0.06), 0 4px 16px rgba(28,26,23,0.05);
+  font-size: 16px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Iowan Old Style", "Georgia", "Charter", serif;
+  line-height: 1.5;
+}
+
+.ui, button, input, select, textarea {
+  font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+}
+
+a { color: var(--accent); }
+
+.shell {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+.topbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 16px;
+  margin-bottom: 32px;
+}
+
+.wordmark {
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.wordmark span { color: var(--accent); }
+
+.tagline {
+  font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.session-chip {
+  font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.session-chip button {
+  margin-left: 10px;
+}
+
+h1 { font-size: 1.7rem; margin: 0 0 4px; }
+h2 { font-size: 1.2rem; margin: 32px 0 12px; }
+h3 { font-size: 1rem; margin: 0 0 8px; font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif; }
+p.lede { color: var(--ink-soft); margin-top: 0; }
+
+.card {
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+@media (max-width: 680px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.field { margin-bottom: 14px; }
+.field label {
+  display: block;
+  font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  margin-bottom: 5px;
+}
+.field input, .field select {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font-size: 0.95rem;
+  background: var(--paper);
+}
+.field input:focus, .field select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+button, .btn {
+  font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 7px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: white;
+  cursor: pointer;
+}
+button.secondary {
+  background: transparent;
+  color: var(--accent);
+}
+button.ghost {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--ink-soft);
+}
+button.danger {
+  background: var(--red);
+  border-color: var(--red);
+}
+button:disabled { opacity: 0.5; cursor: default; }
+
+.role-picker { display: flex; gap: 16px; margin-top: 24px; }
+.role-card {
+  flex: 1;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  text-align: left;
+}
+.role-card:hover { border-color: var(--accent); }
+.role-card h3 { font-size: 1.05rem; margin-bottom: 6px; }
+.role-card p { color: var(--ink-soft); font-size: 0.88rem; margin: 0; }
+
+.badge {
+  display: inline-block;
+  font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 100px;
+}
+.badge.VERIFIED { background: var(--accent-soft); color: var(--accent); }
+.badge.NEEDS_REVIEW { background: var(--amber-soft); color: var(--amber); }
+.badge.NOT_FOUND { background: var(--red-soft); color: var(--red); }
+.badge.PENDING { background: #eee; color: var(--ink-soft); }
+
+.stat-row { display: flex; gap: 14px; flex-wrap: wrap; }
+.stat-box {
+  flex: 1;
+  min-width: 110px;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  text-align: left;
+}
+.stat-box .n { font-size: 1.6rem; font-weight: 700; }
+.stat-box .label { font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif; font-size: 0.75rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.03em; }
+
+table { width: 100%; border-collapse: collapse; font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif; font-size: 0.88rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+th { color: var(--ink-soft); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.02em; }
+
+.heatmap-cell { display: inline-flex; gap: 6px; font-size: 0.8rem; }
+.heatmap-cell .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 3px; }
+.dot.VERIFIED { background: var(--accent); }
+.dot.NEEDS_REVIEW { background: var(--amber); }
+.dot.NOT_FOUND { background: var(--red); }
+.dot.PENDING { background: #ccc; }
+
+.evidence-list { list-style: none; margin: 10px 0 0; padding: 0; font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif; font-size: 0.86rem; }
+.evidence-list li { padding: 5px 0; display: flex; gap: 8px; align-items: flex-start; }
+.evidence-list .mark { flex-shrink: 0; font-weight: 700; }
+.evidence-list .mark.pass { color: var(--accent); }
+.evidence-list .mark.fail { color: var(--red); }
+
+.subject-vault {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  background: var(--paper-raised);
+}
+.subject-vault-head { display: flex; justify-content: space-between; align-items: center; }
+
+.notice {
+  font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+  font-size: 0.85rem;
+  padding: 10px 14px;
+  border-radius: 7px;
+  margin-bottom: 14px;
+}
+.notice.error { background: var(--red-soft); color: var(--red); }
+.notice.success { background: var(--accent-soft); color: var(--accent); }
+
+.muted { color: var(--ink-soft); font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif; font-size: 0.85rem; }
+
+.errors-list { font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif; font-size: 0.82rem; color: var(--red); }
+
+.subject-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--paper);
+}
+.subject-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+.subject-checkbox input { cursor: pointer; }
+
+.link-btn {
+  background: none; border: none; color: var(--accent); cursor: pointer;
+  font-family: -apple-system, "Segoe UI", Inter, system-ui, sans-serif; font-size: 0.85rem; padding: 0;
+  text-decoration: underline;
+}
+
+.evidence-details { margin-top: 8px; }
+.evidence-details summary { cursor: pointer; color: var(--accent); font-size: 0.9rem; user-select: none; }
+.evidence-details[open] summary { margin-bottom: 6px; }
+.evidence-list .mark:empty, .evidence-list .mark:not(.pass):not(.fail) { color: var(--muted, #888); }
+
